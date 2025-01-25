@@ -44,8 +44,8 @@ def trigger_workflow(document_id, compliance_flag):
 # Example Usage
 if __name__ == "__main__":
     # Upload a document
-    file_path = 'path/to/document.pdf'
-    file_name = 'document.pdf'
+    file_path = '/Users/meghanakillada/VSCodeProjects/LPLHackathon2025Team8/documents/Detailed_Compliance_Workflow_Report.pdf'
+    file_name = 'Detailed_Compliance_Workflow_Report.pdf'
     upload_document(file_path, file_name)
     
     # Extract text and simulate compliance flag
