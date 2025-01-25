@@ -54,3 +54,65 @@ if __name__ == "__main__":
     
     # Trigger workflow with extracted data
     trigger_workflow(document_id=file_name, compliance_flag=compliance_flag)
+
+
+
+
+{
+  "Comment": "Document Compliance Workflow with Direct Textract Integration",
+  "StartAt": "Start Textract Job",
+  "States": {
+    "Start Textract Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::textract:startDocumentTextDetection",
+      "Parameters": {
+        "DocumentLocation": {
+          "S3Object": {
+            "Bucket.$": "$.bucket_name",
+            "Name.$": "$.file_name"
+          }
+        }
+      },
+      "ResultPath": "$.textractJob",
+      "Next": "Check Textract Job Status"
+    },
+    "Check Textract Job Status": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "Get Textract Job Result"
+    },
+    "Get Textract Job Result": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::textract:getDocumentTextDetection",
+      "Parameters": {
+        "JobId.$": "$.textractJob.JobId"
+      },
+      "ResultPath": "$.textractResult",
+      "Next": "Validate Compliance"
+    },
+    "Validate Compliance": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.textractResult.DocumentMetadata.Pages",
+          "NumericGreaterThan": 0,
+          "Next": "Notify Compliance Success"
+        },
+        {
+          "Variable": "$.textractResult.DocumentMetadata.Pages",
+          "NumericEquals": 0,
+          "Next": "Notify Compliance Failure"
+        }
+      ],
+      "Default": "Notify Compliance Failure"
+    },
+    "Notify Compliance Success": {
+      "Type": "Succeed"
+    },
+    "Notify Compliance Failure": {
+      "Type": "Fail",
+      "Error": "ComplianceFailure",
+      "Cause": "No pages detected in the document."
+    }
+  }
+}
