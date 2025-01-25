@@ -1,15 +1,3 @@
-from flask import Flask
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "Hello, AWS EC2!"
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=80)
-import boto3
-import json
-
 # Initialize AWS clients
 s3 = boto3.client('s3')
 textract = boto3.client('textract')
@@ -17,7 +5,7 @@ stepfunctions = boto3.client('stepfunctions')
 
 # S3 bucket and Step Functions ARN
 BUCKET_NAME = 'compliancedocsbucket'
-STEP_FUNCTION_ARN = 'arn:aws:states:us-east-1:123456789012:stateMachine:ComplianceWorkflow'
+STEP_FUNCTION_ARN = 'arn:aws:states:us-west-2:847343299502:stateMachine:MyStateMachine-k143ab3o4'
 
 # Step 1: Upload document to S3
 def upload_document(file_path, file_name):
