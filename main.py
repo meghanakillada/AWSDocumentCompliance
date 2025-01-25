@@ -1,3 +1,6 @@
+import boto3
+import json
+
 # Initialize AWS clients
 s3 = boto3.client('s3')
 textract = boto3.client('textract')
@@ -51,79 +54,3 @@ if __name__ == "__main__":
     
     # Trigger workflow with extracted data
     trigger_workflow(document_id=file_name, compliance_flag=compliance_flag)
-
-
-
-
-
-
-{
-  "Comment": "Document Compliance Workflow",
-  "StartAt": "Start Textract Job",
-  "States": {
-    "Start Textract Job": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:us-west-2:123456789012:function:StartTextractJob",
-      "ResultPath": "$.textractJob",
-      "Next": "Check Textract Job Status"
-    },
-    "Check Textract Job Status": {
-      "Type": "Wait",
-      "Seconds": 60,
-      "Next": "Is Textract Job Complete?"
-    },
-    "Is Textract Job Complete?": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.textractJob.Status",
-          "StringEquals": "SUCCEEDED",
-          "Next": "Process Extracted Data"
-        },
-        {
-          "Variable": "$.textractJob.Status",
-          "StringEquals": "FAILED",
-          "Next": "Handle Textract Failure"
-        }
-      ],
-      "Default": "Check Textract Job Status"
-    },
-    "Process Extracted Data": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:us-west-2:123456789012:function:ProcessExtractedData",
-      "ResultPath": "$.processedData",
-      "Next": "Validate Compliance"
-    },
-    "Validate Compliance": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.processedData.complianceFlag",
-          "BooleanEquals": true,
-          "Next": "Notify Compliance Success"
-        },
-        {
-          "Variable": "$.processedData.complianceFlag",
-          "BooleanEquals": false,
-          "Next": "Notify Compliance Failure"
-        }
-      ],
-      "Default": "Notify Compliance Failure"
-    },
-    "Notify Compliance Success": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:us-west-2:123456789012:function:NotifyComplianceSuccess",
-      "End": true
-    },
-    "Notify Compliance Failure": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:us-west-2:123456789012:function:NotifyComplianceFailure",
-      "End": true
-    },
-    "Handle Textract Failure": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:us-west-2:123456789012:function:HandleTextractFailure",
-      "End": true
-    }
-  }
-}
