@@ -16,7 +16,7 @@ textract = boto3.client('textract')
 stepfunctions = boto3.client('stepfunctions')
 
 # S3 bucket and Step Functions ARN
-BUCKET_NAME = 'compliance-docs-bucket'
+BUCKET_NAME = 'compliancedocsbucket'
 STEP_FUNCTION_ARN = 'arn:aws:states:us-east-1:123456789012:stateMachine:ComplianceWorkflow'
 
 # Step 1: Upload document to S3
