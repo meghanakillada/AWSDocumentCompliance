@@ -70,6 +70,38 @@ def add_arguments(parser):
         "image", help="The document that you want to analyze.") 
 
 
+def process_key_value_pairs(blocks):
+    """Process the key-value pairs from the list of blocks.
+    :param blocks: List of Block objects from Textract response.
+    :return: Dictionary of key-value pairs.
+    """
+    key_value_pairs = {}
+
+    # Create a mapping of Key Ids to Value Ids
+    key_map = {}
+    value_map = {}
+
+    for block in blocks:
+        if block['BlockType'] == 'KEY':
+            key_map[block['Id']] = block
+        elif block['BlockType'] == 'VALUE':
+            value_map[block['Id']] = block
+
+    # Now we need to find the relationship between keys and values
+    for block in blocks:
+        if block['BlockType'] == 'KEY':
+            key_id = block['Id']
+            if 'Relationships' in block:
+                for relationship in block['Relationships']:
+                    if relationship['Type'] == 'VALUE':
+                        value_id = relationship['Ids'][0]
+                        if value_id in value_map:
+                            value_text = value_map[value_id].get('Text', '')
+                            key_text = block.get('Text', '')
+                            key_value_pairs[key_text] = value_text
+
+    return key_value_pairs
+
 def main():
     """
     Entrypoint for script.
@@ -90,8 +122,21 @@ def main():
         blocks = result['body']
         blocks = json.loads(blocks)
 
-        if status == 200:
 
+        if status == 200:
+            # Process the key-value pairs.
+            key_value_pairs = process_key_value_pairs(blocks)
+            
+            for key, value in key_value_pairs.items():
+                print(f"Key: {key}, Value: {value}")
+
+            print("Total key-value pairs detected: " + str(len(key_value_pairs)))
+        else:
+            print(f"Error: {result['statusCode']}")
+            print(f"Message: {result['body']}")
+            
+        '''
+        if status == 200:
             for block in blocks:
                 print('Type: ' + block['BlockType'])
                 if block['BlockType'] != 'PAGE':
@@ -108,6 +153,7 @@ def main():
         else:
             print(f"Error: {result['statusCode']}")
             print(f"Message: {result['body']}")
+        '''
 
     except ClientError as error:
         logging.error(error)
