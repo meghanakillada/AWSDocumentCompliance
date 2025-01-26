@@ -1,5 +1,6 @@
 import boto3
 import json
+import time
 
 # Initialize AWS clients
 s3 = boto3.client('s3')
@@ -30,6 +31,25 @@ def extract_text(file_name):
     return job_id
 
 # Step 3: Trigger Step Functions workflow
+def check_textract_status(job_id):
+    while True:
+        response = textract.get_document_text_detection(JobId=job_id)
+        status = response['JobStatus']
+        if status == 'SUCCEEDED':
+            print("Textract job completed successfully.")
+            return response['Blocks']
+        elif status == 'FAILED':
+            print("Textract job failed.")
+            return None
+        print("Textract job in progress, checking again...")
+        time.sleep(30)  # Wait before checking status again
+
+
+def process_extracted_data(extracted_data):
+    # Process the Textract output and check compliance (simple example)
+    compliance_flag = "compliant" in extracted_data  # Simplified compliance check
+    return compliance_flag
+
 def trigger_workflow(document_id, compliance_flag):
     input_data = {
         "DocumentID": document_id,
@@ -48,71 +68,12 @@ if __name__ == "__main__":
     file_name = 'Detailed_Compliance_Workflow_Report.pdf'
     upload_document(file_path, file_name)
     
-    # Extract text and simulate compliance flag
     job_id = extract_text(file_name)
-    compliance_flag = True  # Example flag for testing
+
+    # Extract text and simulate compliance flag
+    extracted_data = check_textract_status(job_id)
+    if extracted_data:
+        compliance_flag = process_extracted_data(str(extracted_data))
     
-    # Trigger workflow with extracted data
-    trigger_workflow(document_id=file_name, compliance_flag=compliance_flag)
-
-
-
-
-{
-  "Comment": "Document Compliance Workflow with Direct Textract Integration",
-  "StartAt": "Start Textract Job",
-  "States": {
-    "Start Textract Job": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::textract:startDocumentTextDetection",
-      "Parameters": {
-        "DocumentLocation": {
-          "S3Object": {
-            "Bucket.$": "$.bucket_name",
-            "Name.$": "$.file_name"
-          }
-        }
-      },
-      "ResultPath": "$.textractJob",
-      "Next": "Check Textract Job Status"
-    },
-    "Check Textract Job Status": {
-      "Type": "Wait",
-      "Seconds": 60,
-      "Next": "Get Textract Job Result"
-    },
-    "Get Textract Job Result": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::textract:getDocumentTextDetection",
-      "Parameters": {
-        "JobId.$": "$.textractJob.JobId"
-      },
-      "ResultPath": "$.textractResult",
-      "Next": "Validate Compliance"
-    },
-    "Validate Compliance": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.textractResult.DocumentMetadata.Pages",
-          "NumericGreaterThan": 0,
-          "Next": "Notify Compliance Success"
-        },
-        {
-          "Variable": "$.textractResult.DocumentMetadata.Pages",
-          "NumericEquals": 0,
-          "Next": "Notify Compliance Failure"
-        }
-      ],
-      "Default": "Notify Compliance Failure"
-    },
-    "Notify Compliance Success": {
-      "Type": "Succeed"
-    },
-    "Notify Compliance Failure": {
-      "Type": "Fail",
-      "Error": "ComplianceFailure",
-      "Cause": "No pages detected in the document."
-    }
-  }
-}
+        # Trigger workflow with extracted data
+        trigger_workflow(document_id=file_name, compliance_flag=compliance_flag)
