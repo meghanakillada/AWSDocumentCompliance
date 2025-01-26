@@ -1,6 +1,7 @@
 import boto3
 import json
 import time
+import os
 
 # Initialize AWS clients
 s3 = boto3.client('s3')
@@ -61,11 +62,13 @@ def trigger_workflow(document_id, compliance_flag):
     )
     print(f"Step Functions workflow triggered. Execution ARN: {response['executionArn']}")
 
+
 # Example Usage
 if __name__ == "__main__":
     # Upload a document
-    file_path = '/Users/meghanakillada/VSCodeProjects/LPLHackathon2025Team8/documents/Detailed_Compliance_Workflow_Report.pdf'
-    file_name = 'Detailed_Compliance_Workflow_Report.pdf'
+    file_path = input("Please enter the full file path of the document you want to upload: ")
+    file_name = os.path.basename(file_path)
+
     upload_document(file_path, file_name)
     
     job_id = extract_text(file_name)
