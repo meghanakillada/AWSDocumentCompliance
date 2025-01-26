@@ -80,3 +80,88 @@ if __name__ == "__main__":
     
         # Trigger workflow with extracted data
         trigger_workflow(document_id=file_name, compliance_flag=compliance_flag)
+
+
+
+import boto3
+import time
+import json
+import os
+
+# Initialize AWS clients
+textract_client = boto3.client('textract')
+sns_client = boto3.client('sns')
+
+# SNS Topic ARN from environment variable (you must set this in Lambda's environment variables)
+COMPLIANCE_SNS_TOPIC_ARN = os.environ['COMPLIANCE_SNS_TOPIC_ARN']
+
+def lambda_handler(event, context):
+    # Extract the S3 bucket and document name from the event
+    s3_bucket = event['Records'][0]['s3']['bucket']['name']
+    s3_document_key = event['Records'][0]['s3']['object']['key']
+    
+    print(f"Document uploaded: Bucket={s3_bucket}, Document={s3_document_key}")
+    
+    # Step 1: Start Textract job
+    job_id = start_textract_job(s3_bucket, s3_document_key)
+    print(f"Started Textract job with JobId: {job_id}")
+    
+    # Step 2: Poll for Textract job completion
+    status, textract_response = check_textract_job_status(job_id)
+    
+    if status == 'SUCCEEDED':
+        # Step 3: Process the extracted data
+        compliance_flag = process_extracted_data(textract_response)
+        
+        # Step 4: Validate compliance
+        if compliance_flag:
+            print("Document complies with the rules.")
+            notify_compliance_result(True)
+        else:
+            print("Document failed compliance.")
+            notify_compliance_result(False)
+    else:
+        print(f"Textract job failed with status: {status}")
+        notify_compliance_result(False)
+
+def start_textract_job(s3_bucket, s3_document_key):
+    """Starts the Textract job to extract text from the document"""
+    response = textract_client.start_document_text_detection(
+        DocumentLocation={'S3Object': {'Bucket': s3_bucket, 'Name': s3_document_key}}
+    )
+    return response['JobId']
+
+def check_textract_job_status(job_id):
+    """Polls the Textract job status until completion"""
+    while True:
+        response = textract_client.get_document_text_detection(JobId=job_id)
+        status = response['JobStatus']
+        
+        if status in ['SUCCEEDED', 'FAILED']:
+            return status, response
+        print(f"Textract job still in progress. Status: {status}")
+        time.sleep(30)  # Poll every 30 seconds
+
+def process_extracted_data(textract_response):
+    """Process the extracted data from Textract and check for compliance"""
+    extracted_data = textract_response['Blocks']
+    compliance_flag = validate_compliance(extracted_data)
+    return compliance_flag
+
+def validate_compliance(extracted_data):
+    """Validate compliance by checking the extracted data for certain conditions"""
+    # Example compliance check: if 'compliant' keyword exists in any extracted text
+    for block in extracted_data:
+        if block['BlockType'] == 'LINE' and 'compliant' not in block['Text'].lower():
+            return False
+    return True
+
+def notify_compliance_result(is_compliant):
+    """Send an SNS notification based on the compliance check"""
+    message = "Document complies with the rules." if is_compliant else "Document failed compliance."
+    response = sns_client.publish(
+        TopicArn=COMPLIANCE_SNS_TOPIC_ARN,
+        Message=message
+    )
+    print(f"Sent notification: {message}, SNS response: {response}")
+
