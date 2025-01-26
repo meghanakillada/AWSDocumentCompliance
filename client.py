@@ -119,9 +119,15 @@ def main():
         result = analyze_image(args.function, args.image)
         status = result['statusCode']
 
-        blocks = result['body']
-        blocks = json.loads(blocks)
-
+        #blocks = result['body']
+        #blocks = json.loads(blocks)
+        body = result['body']
+        if isinstance(body, str):
+            blocks = json.loads(body)
+        elif isinstance(body, dict):
+            blocks = body
+        else:
+            raise ValueError("Unexpected response body format")
 
         if status == 200:
             # Process the key-value pairs.
@@ -134,7 +140,7 @@ def main():
         else:
             print(f"Error: {result['statusCode']}")
             print(f"Message: {result['body']}")
-            
+
         '''
         if status == 200:
             for block in blocks:
