@@ -1,4 +1,10 @@
-# LPLHackathon2025Team8
+# AWS Document Compliance Project
+**Won for "Most Impact Potential" in LPL Finanial Hackarama 2025**
+
+### Contributers
+- Maggie Killada
+- Zubeyda Farah
+- Samira Mohamed
 
 ### Instructions
 - To run the project, make sure you are in the repo directory
