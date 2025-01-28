@@ -1,4 +1,4 @@
-# AWS Document Compliance Project
+# AWS Document Compliance
 **Won for "Most Impact Potential" in LPL Finanial Hackarama 2025**
 
 ### Contributers
